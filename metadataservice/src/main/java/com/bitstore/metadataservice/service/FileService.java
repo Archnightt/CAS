@@ -3,6 +3,7 @@ package com.bitstore.metadataservice.service;
 import com.bitstore.metadataservice.model.FileMetadata;
 import com.bitstore.metadataservice.repository.FileMetadataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,7 +24,9 @@ public class FileService {
     @Autowired
     private RestTemplate restTemplate;
 
-    private static final String BLOCK_SERVICE_URL = "http://localhost:8082/api/v1/blocks"; // Assuming BlockService is on 8082
+    @Value("${block.service.url}")
+    private String blockServiceUrl;
+    
     private static final int CHUNK_SIZE = 1024 * 1024; // 1MB
 
     public void uploadFile(MultipartFile file) throws IOException, NoSuchAlgorithmException {
@@ -43,8 +46,8 @@ public class FileService {
             String hash = calculateHash(chunk);
             blockHashes.add(hash);
 
-            // Send chunk to Block Service
-            restTemplate.postForObject(BLOCK_SERVICE_URL, chunk, String.class);
+            // Send chunk to Block Service (using dynamic URL)
+            restTemplate.postForObject(blockServiceUrl, chunk, String.class);
         }
 
         FileMetadata metadata = new FileMetadata();
@@ -54,14 +57,14 @@ public class FileService {
         repository.save(metadata);
     }
 
-    // NEW: Retrieve and Stitch Blocks
     public byte[] downloadFile(Long id) {
         FileMetadata metadata = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("File not found"));
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             for (String hash : metadata.getBlockHashes()) {
-                byte[] block = restTemplate.getForObject(BLOCK_SERVICE_URL + "/" + hash, byte[].class);
+                // Retrieve chunk from Block Service (using dynamic URL)
+                byte[] block = restTemplate.getForObject(blockServiceUrl + "/" + hash, byte[].class);
                 if (block != null) {
                     outputStream.write(block);
                 }
@@ -72,7 +75,6 @@ public class FileService {
         }
     }
 
-    // NEW: List all files for the library view
     public List<FileMetadata> getAllFiles() {
         return repository.findAll();
     }

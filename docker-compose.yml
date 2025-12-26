@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 1. Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bitstore-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bitstore
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - bitstore-network
+
+  # 2. Metadata Service (Brain)
+  metadataservice:
+    build: ./metadataservice
+    container_name: metadata-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bitstore
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password
+      BLOCK_SERVICE_URL: http://blockservice:8082/api/v1/blocks
+    depends_on:
+      - postgres
+      - blockservice
+    networks:
+      - bitstore-network
+
+  # 3. Block Service (Vault)
+  blockservice:
+    build: ./blockservice
+    container_name: block-service
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./block_data:/app/data
+    networks:
+      - bitstore-network
+
+  # 4. Frontend (UI)
+  frontend:
+    build: ./frontend
+    container_name: bitstore-ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - metadataservice
+    networks:
+      - bitstore-network
+
+volumes:
+  postgres_data:
+
+networks:
+  bitstore-network:
+    driver: bridge

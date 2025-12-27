@@ -1,4 +1,4 @@
-# BitStore
+# BitStore 📦
 
 ![BitStore UI](assets/frontend.png)
 
@@ -29,60 +29,54 @@ Before storing a block, the system checks: *"Do I already have a block with hash
 * **No:** We write the new block to the **Block Service**.
 * *Result:* If 1,000 users upload the exact same 50MB video, BitStore only stores it **once**, saving 99.9% of storage space.
 
-### 4. 🧩 Re-patching (The Assembly)
-To download a file, the system reverses the process:
-1.  Look up the "Recipe" (Metadata): *"File X is made of blocks [A, B, C]"*.
-2.  Fetch blocks A, B, and C from the storage vault.
-3.  Stitch them back together in order and stream the bytes to the user.
+### 4. 🧬 File DNA (The Visualizer)
+The frontend features a real-time **Inspector Panel**. When you click any file, you can see its "DNA"—the list of constituent block hashes. This provides visual proof of deduplication: upload the same file twice, and you will see the exact same block hashes being reused.
 
 ---
 
-## 🏗 Architecture
+## 🏗 Architecture & Stack
 
-BitStore follows a decoupled microservices architecture:
+BitStore is fully Dockerized and runs on four orchestrated containers:
 
 ### **Metadata Service (The Brain)**
 * **Stack:** Java 17, Spring Boot, Hibernate.
-* **Role:** Maintains the `File Name -> [List of Block Hashes]` mapping. It never touches the raw data on disk, keeping it lightweight and fast.
+* **Role:** Maintains the `File Name -> [List of Block Hashes]` mapping. It never touches the raw data on disk, keeping it lightweight.
 
 ### **Block Service (The Vault)**
 * **Stack:** Java 17, Spring Boot, Local IO.
 * **Role:** A "Dumb" storage node. It doesn't know what "File.jpg" is; it only knows it holds a block named `8f4b...`.
 
-### **Frontend (The Interface)**
-* **Stack:** React, Vite (Rolldown), Tailwind CSS, Axios.
-* **Role:** A "Soft Modern" UI that visualizes the upload queue and handles real-time progress streaming.
+### **PostgreSQL (The Index)**
+* **Role:** Relational persistence for file metadata and ownership records.
+
+### **Frontend & Gateway (The Interface)**
+* **Stack:** React, Vite, Tailwind CSS, Nginx.
+* **Role:** Nginx serves the React UI and acts as a reverse proxy/load balancer for API requests.
 
 ---
 
 ## 🚀 Getting Started
 
+You can run the entire distributed system locally with a single command.
+
 ### Prerequisites
-* Java 17+
-* Node.js 18+
-* Maven Wrapper (Included)
+* Docker & Docker Compose installed.
 
 ### Installation
 
 1.  **Clone the Repository**
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/BitStore.git](https://github.com/YOUR_USERNAME/BitStore.git)
+    git clone [https://github.com/Archnightt/BitStore.git](https://github.com/Archnightt/BitStore.git)
     cd BitStore
     ```
 
-2.  **Start the Microservices**
-    * **Terminal 1 (Metadata):** `./mvnw spring-boot:run -p metadataservice`
-    * **Terminal 2 (Block Storage):** `./mvnw spring-boot:run -p blockservice`
+2.  **Launch the System**
+    ```bash
+    docker-compose up --build
+    ```
+    *(The first build may take a few minutes as it downloads dependencies and compiles the Java images).*
 
-3.  **Start the Frontend**
-    * **Terminal 3 (UI):**
-        ```bash
-        cd frontend
-        npm install
-        npm run dev
-        ```
-
-4.  **Access the Cloud**
+3.  **Access the Cloud**
     Open `http://localhost:5173` in your browser.
 
 ---
